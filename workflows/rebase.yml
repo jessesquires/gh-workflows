@@ -1,0 +1,37 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+# Rebases a pull request on the repo's default branch when the "rebase" label is added
+
+name: Rebase Pull Request
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  main:
+    if: ${{ github.event.label.name == 'rebase' }}
+    name: Rebase
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      # https://github.com/marketplace/actions/automatic-rebase
+      - name: automatic rebase
+        uses: cirrus-actions/rebase@1.5
+        env:
+          # Note: you can also use `secrets.GITHUB_TOKEN`,
+          # but subsequent workflows will not be triggered
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      # https://github.com/marketplace/actions/actions-ecosystem-remove-labels
+      - name: remove label
+        if: always()
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: rebase
