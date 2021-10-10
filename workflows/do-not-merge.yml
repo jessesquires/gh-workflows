@@ -1,0 +1,22 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+# Fails a pull request if it gets labeled as "do not merge"
+
+name: Do Not Merge
+
+on:
+  pull_request:
+    types: [opened, reopened, labeled, unlabeled]
+
+jobs:
+  do-not-merge:
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/marketplace/actions/require-labels
+      - name: check labels
+        uses: mheap/github-action-required-labels@v1
+        with:
+          mode: exactly
+          count: 0
+          labels: "do not merge"
