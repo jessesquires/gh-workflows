@@ -2,6 +2,7 @@
 # https://github.com/actions/virtual-environments/
 
 # Rebases a pull request on the repo's default branch when the "rebase" label is added
+# Note: you'll need to add a personal access token to your repo, `PERSONAL_ACCESS_TOKEN`.
 
 name: Rebase Pull Request
 
