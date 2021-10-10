@@ -23,7 +23,7 @@ jobs:
       # https://github.com/marketplace/actions/actions-ecosystem-remove-labels
       - name: remove label
         uses: actions-ecosystem/action-remove-labels@v1
-        if: env.BASE_BRANCH == "$DEFAULT_BRANCH"
+        if: env.BASE_BRANCH == env.DEFAULT_BRANCH
         with:
           labels: stacked PR
 
@@ -33,6 +33,6 @@ jobs:
       # https://github.com/marketplace/actions/actions-ecosystem-add-labels
       - name: add label
         uses: actions-ecosystem/action-add-labels@v1
-        if: env.BASE_BRANCH != "$DEFAULT_BRANCH"
+        if: env.BASE_BRANCH != env.DEFAULT_BRANCH
         with:
           labels: stacked PR
