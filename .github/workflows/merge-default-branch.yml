@@ -15,7 +15,7 @@ env:
 
 jobs:
   main:
-    if: ${{ github.event.label.name == 'merge main' }}
+    if: ${{ contains(github.event.*.labels.*.name, 'merge main') }}
     name: Merge Main
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +34,7 @@ jobs:
           git pull
           git checkout "$DEFAULT_BRANCH"
           git status
+          git pull
           git checkout "$GITHUB_HEAD_REF"
           git merge "$DEFAULT_BRANCH" --no-edit
           git push
