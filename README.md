@@ -4,7 +4,7 @@
 
 ## About
 
-You can find all workflows in [`workflows/`](https://github.com/jessesquires/gh-workflows/tree/main/workflows).
+You can find all workflows in [`.github/workflows/`](https://github.com/jessesquires/gh-workflows/tree/main/.github/workflows).
 
 Each workflow contains comments explaining what it does. Most should be self-explanatory.
 
@@ -18,10 +18,10 @@ GitHub Actions workflows for automatic rebasing and merging](https://www.jessesq
 
 ## How to use
 
-1. Add these workflows to your own repo in `/.github/workflows/`. 
+1. Add these workflows to your own repo in `.github/workflows/`.
 1. Edit workflows as needed.
 
 > 💡 **Note:**
-> 
+>
 > - Some workflows require adding a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 > - Some workflows expect specific labels to exist, as these are what trigger the workflow. You'll need to create these labels in your repo. If you name the labels differently, you will need to edit the workflow accordingly.
