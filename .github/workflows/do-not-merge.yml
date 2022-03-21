@@ -12,7 +12,7 @@ on:
 jobs:
   do-not-merge:
     if: ${{ contains(github.event.*.labels.*.name, 'do not merge') }}
-    name: "Prevent Merging"
+    name: Prevent Merging
     runs-on: ubuntu-latest
     steps:
       - name: Check for label
