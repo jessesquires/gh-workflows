@@ -4,13 +4,17 @@
 # Automatically labels a pull request as "stacked PR" if it is stacked,
 # i.e., not merging into the repo's default branch but into another PR.
 #
-# Removes label automatically once target branch is changed to repo's default branch.
+# - Removes label automatically once target branch is changed to repo's default branch.
+# - Prevents merging stacked PRs.
+# - Ignores 'release/*' branches.
 
 name: Label Stacked PRs
 
 on:
   pull_request:
-    types: [synchronize, opened, reopened, edited, closed]
+    types: [synchronize, opened, reopened, labeled, unlabeled, edited, closed]
+    branches-ignore:
+      - 'release/*'
 
 env:
   DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -18,6 +22,7 @@ env:
 
 jobs:
   remove-stacked-label:
+    name: Remove Stacked Label
     runs-on: ubuntu-latest
     steps:
       # https://github.com/marketplace/actions/actions-ecosystem-remove-labels
@@ -28,6 +33,7 @@ jobs:
           labels: stacked PR
 
   add-stacked-label:
+    name: Add Stacked Label
     runs-on: ubuntu-latest
     steps:
       # https://github.com/marketplace/actions/actions-ecosystem-add-labels
@@ -36,9 +42,15 @@ jobs:
         if: env.BASE_BRANCH != env.DEFAULT_BRANCH
         with:
           labels: stacked PR
+
+  prevent-stacked-merge:
+    needs: [add-stacked-label]
+    name: Prevent Stacked Merge
+    runs-on: ubuntu-latest
+    steps:
       - name: prevent merge
-        if: ${{ contains(github.event.*.labels.*.name, 'stacked PR') }}
+        if: env.BASE_BRANCH != env.DEFAULT_BRANCH
         run: |
           echo "Pull request is stacked. Failing workflow to prevent merge."
-          echo "Pull requests should only merge into the default branch."
+          echo "Pull requests should only merge into the default branch: $DEFAULT_BRANCH"
           exit 1
