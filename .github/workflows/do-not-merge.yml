@@ -1,7 +1,7 @@
 # GitHub Actions Virtual Environments
 # https://github.com/actions/virtual-environments/
 
-# Fails a pull request if it gets labeled as "do not merge"
+# Fails a pull request if it gets labeled as "Do Not Merge"
 
 name: Do Not Merge
 
@@ -12,11 +12,11 @@ on:
 jobs:
   do-not-merge:
     if: ${{ contains(github.event.*.labels.*.name, 'do not merge') }}
-    name: Prevent Merging
+    name: Check Do Not Merge
     runs-on: ubuntu-latest
     steps:
-      - name: Check for label
+      - name: check for label
         run: |
-          echo "Pull request is labeled as 'do not merge'"
+          echo "Pull request is labeled as 'Do Not Merge'"
           echo "This workflow fails so that the pull request cannot be merged"
           exit 1
