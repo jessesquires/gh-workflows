@@ -1,6 +1,10 @@
 # GitHub Actions Virtual Environments
 # https://github.com/actions/virtual-environments/
 
+# Creates a pull request from `release/*` branches targeting the repo's default branch.
+# Runs on every push to `release/*`.
+# Note: you'll need to add a personal access token to your repo, `PERSONAL_ACCESS_TOKEN`.
+
 name: Merge Release Into Main
 
 on:
