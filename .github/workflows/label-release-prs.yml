@@ -1,0 +1,23 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+# Automatically labels a pull request as "release" if it is merging into a release branch.
+
+name: Label Release PRs
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    branches:
+      - 'release/*'
+
+jobs:
+  add-release-label:
+    name: Add Release Label
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/marketplace/actions/actions-ecosystem-add-labels
+      - name: add label
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: release
