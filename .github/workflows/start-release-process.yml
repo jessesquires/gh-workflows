@@ -1,0 +1,141 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+# Begins a new release.
+#
+# 1. creates a release/* branch
+# 2. version bumps main for next release
+# 3. creates milestone for next release
+
+name: Start Release Process
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        type: choice
+        description: Version bump on main for NEXT release
+        options:
+        - major
+        - minor
+        - patch
+        default: 'minor'
+        required: true
+
+env:
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+jobs:
+  # version bump requires macos to update the xcconfig file
+  main:
+    name: Start Release Process
+    runs-on: macos-12
+    outputs:
+      output_version: ${{ steps.step_version.outputs.app_version }}
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: ruby versions
+        run: |
+          ruby --version
+          gem --version
+
+      # https://github.com/ruby/setup-ruby
+      - name: ruby setup
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0
+          bundler-cache: true
+
+      - name: major version bump
+        if: ${{ github.event.inputs.version_bump == 'major' }}
+        # TODO: run your script to bump the version
+        run: echo "major" >> version.txt
+
+      - name: minor version bump
+        if: ${{ github.event.inputs.version_bump == 'minor' }}
+        # TODO: run your script to bump the version
+        run: echo "minor" >> version.txt
+
+      - name: patch version bump
+        if: ${{ github.event.inputs.version_bump == 'patch' }}
+        # TODO: run your script to bump the version
+        run: echo "patch" >> version.txt
+
+      - name: set env variables
+        # TODO: use your version script here
+        run: |
+          echo "app_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
+          echo "release_branch=release/$(./scripts/app_version.rb)" >> $GITHUB_ENV
+
+      - name: verify env variables
+        run: |
+          echo "App Version: ${{ env.app_version }}"
+          echo "Release Branch: ${{ env.release_branch }}"
+
+      - name: set version output
+        id: step_version
+        run: echo "::set-output name=app_version::${{ env.app_version }}"
+
+      # https://github.com/marketplace/actions/create-pull-request
+      - name: create version bump PR
+        id: create-pr
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          base: ${{ github.event.repository.default_branch }}
+          commit-message: "[Automated] Version Bump to ${{ env.app_version }}"
+          title: "[Automated] Version Bump to ${{ env.app_version }}"
+          body: |
+            :robot: _Automated Pull Request_ :robot:
+
+            **Version bump `main` to `${{ env.app_version }}`**
+
+            This pull request was initiated by @${{ github.actor }}.
+          branch: automated/version-bump-${{ env.app_version }}
+          delete-branch: true
+          draft: false
+
+      # https://github.com/marketplace/actions/enable-pull-request-automerge
+      - name: enable automerge
+        if: steps.create-pr.outputs.pull-request-operation == 'created'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
+          merge-method: squash
+
+      - name: create release branch
+        run: |
+          git config --global user.email "${GITHUB_ACTOR}"
+          git config --global user.name "${GITHUB_ACTOR}@users.noreply.github.com"
+          git status
+          git checkout "$DEFAULT_BRANCH"
+          git pull
+          git status
+          git checkout -b "${{ env.release_branch }}"
+          git push origin -u "${{ env.release_branch }}"
+          git status
+
+  # the milestone action requires linux
+  # so this needs to be a separate job
+  # we pass this job the app version as an output from the previous job
+  milestone:
+    needs: [main]
+    name: Create Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - name: verify job outputs
+        run: echo ${{ needs.main.outputs.output_version }}
+
+      # https://github.com/marketplace/actions/manage-milestones
+      - name: create milestone
+        uses: julb/action-manage-milestone@v1
+        with:
+          title: ${{ needs.main.outputs.output_version }}
+          state: open
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

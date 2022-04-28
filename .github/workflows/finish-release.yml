@@ -1,0 +1,108 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+# Wraps up a release.
+#
+# 1. creates a git tag
+# 2. closes the release milestone
+# 3. creates a GH release from the tag
+
+name: Finish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation-branch:
+        type: boolean
+        description: I have selected the RELEASE branch above.
+        required: true
+      confirmation-merge:
+        type: boolean
+        description: I have verified that the release branch has been merged and is zero commits ahead of main.
+        required: true
+
+jobs:
+  # version script requires macos
+  main:
+    name: Finish Release
+    runs-on: macos-12
+    outputs:
+      output_version: ${{ steps.step_version.outputs.app_version }}
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: ruby versions
+        run: |
+          ruby --version
+          gem --version
+
+      # https://github.com/ruby/setup-ruby
+      - name: ruby setup
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0
+          bundler-cache: true
+
+      - name: set env variables
+        # TODO: use your version script here
+        run: |
+          echo "app_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
+          echo "release_branch=release/$(./scripts/app_version.rb)" >> $GITHUB_ENV
+
+      - name: verify env variables
+        run: |
+          echo "App Version: ${{ env.app_version }}"
+          echo "Release Branch: ${{ env.release_branch }}"
+
+      - name: set version output
+        id: step_version
+        run: echo "::set-output name=app_version::${{ env.app_version }}"
+
+      - name: set git config
+        run: |
+          git config --global user.email "${GITHUB_ACTOR}"
+          git config --global user.name "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      - name: create git tag
+        run: |
+          git status
+          git tag -a "v${{ env.app_version }}" -m "v${{ env.app_version }}"
+          git push --tags origin
+          git status
+
+      - name: delete release branch
+        run: |
+          git status
+          git push origin --delete "${{ env.release_branch }}"
+          git status
+
+  # the milestone and github release actions requires linux
+  # so this needs to be a separate job
+  # we pass this job the app version as an output from the previous job
+  milestone:
+    needs: [main]
+    name: Close Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - name: verify job outputs
+        run: echo ${{ needs.main.outputs.output_version }}
+
+      # https://github.com/marketplace/actions/github-create-tag-release
+      - name: create github release
+        uses: Roang-zero1/github-create-release-action@v2.1.0
+        with:
+          created_tag: "v${{ needs.main.outputs.output_version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      # https://github.com/marketplace/actions/manage-milestones
+      - name: close milestone
+        uses: julb/action-manage-milestone@v1
+        with:
+          title: ${{ needs.main.outputs.output_version }}
+          state: closed
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
