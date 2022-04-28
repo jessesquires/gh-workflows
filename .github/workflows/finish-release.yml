@@ -82,9 +82,9 @@ jobs:
   # the milestone and github release actions requires linux
   # so this needs to be a separate job
   # we pass this job the app version as an output from the previous job
-  milestone:
+  finish:
     needs: [main]
-    name: Close Milestone
+    name: Create Release and Close Milestone
     runs-on: ubuntu-latest
     steps:
       - name: verify job outputs
