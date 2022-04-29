@@ -31,7 +31,8 @@ jobs:
     name: Start Release Process
     runs-on: macos-12
     outputs:
-      output_version: ${{ steps.step_version.outputs.app_version }}
+      output_release_version: ${{ steps.step_release_version.outputs.release_version }}
+      output_next_version: ${{ steps.step_next_version.outputs.next_version }}
     steps:
       - name: git checkout
         uses: actions/checkout@v3
@@ -50,35 +51,48 @@ jobs:
           ruby-version: 3.0
           bundler-cache: true
 
+      - name: set env release version
+        # TODO: use your version script here
+        run: |
+          echo "release_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
+          echo "release_branch=release/$(./scripts/app_version.rb)" >> $GITHUB_ENV
+
+      - name: verify env release variables
+        run: |
+          echo "Release Version: ${{ env.release_version }}"
+          echo "Release Branch: ${{ env.release_branch }}"
+
+      - name: set release version output
+        id: step_release_version
+        run: echo "::set-output name=release_version::${{ env.release_version }}"
+
       - name: major version bump
         if: ${{ github.event.inputs.version_bump == 'major' }}
         # TODO: run your script to bump the version
-        run: echo "major" >> version.txt
+        run: ./scripts/set_app_version.rb
 
       - name: minor version bump
         if: ${{ github.event.inputs.version_bump == 'minor' }}
         # TODO: run your script to bump the version
-        run: echo "minor" >> version.txt
+        run: ./scripts/set_app_version.rb
 
       - name: patch version bump
         if: ${{ github.event.inputs.version_bump == 'patch' }}
         # TODO: run your script to bump the version
-        run: echo "patch" >> version.txt
+        run: ./scripts/set_app_version.rb
 
-      - name: set env variables
+      - name: set env next version
         # TODO: use your version script here
         run: |
-          echo "app_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
-          echo "release_branch=release/$(./scripts/app_version.rb)" >> $GITHUB_ENV
+          echo "next_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
 
-      - name: verify env variables
+      - name: verify env next version
         run: |
-          echo "App Version: ${{ env.app_version }}"
-          echo "Release Branch: ${{ env.release_branch }}"
+          echo "Next Version: ${{ env.next_version }}"
 
-      - name: set version output
-        id: step_version
-        run: echo "::set-output name=app_version::${{ env.app_version }}"
+      - name: set next version output
+        id: step_next_version
+        run: echo "::set-output name=next_version::${{ env.next_version }}"
 
       # https://github.com/marketplace/actions/create-pull-request
       - name: create version bump PR
@@ -87,15 +101,15 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           base: ${{ github.event.repository.default_branch }}
-          commit-message: "[Automated] Version Bump to ${{ env.app_version }}"
-          title: "[Automated] Version Bump to ${{ env.app_version }}"
+          commit-message: "[Automated] Version Bump to ${{ env.next_version }}"
+          title: "[Automated] Version Bump to ${{ env.next_version }}"
           body: |
             :robot: _Automated Pull Request_ :robot:
 
-            **Version bump `main` to `${{ env.app_version }}`**
+            **Version bump `main` to `${{ env.next_version }}`**
 
             This pull request was initiated by @${{ github.actor }}.
-          branch: automated/version-bump-${{ env.app_version }}
+          branch: automated/version-bump-${{ env.next_version }}
           delete-branch: true
           draft: false
 
@@ -123,19 +137,45 @@ jobs:
   # the milestone action requires linux
   # so this needs to be a separate job
   # we pass this job the app version as an output from the previous job
-  milestone:
+  milestone-and-checklist:
     needs: [main]
-    name: Create Milestone
+    name: Create Milestone and Checklist
     runs-on: ubuntu-latest
     steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
       - name: verify job outputs
-        run: echo ${{ needs.main.outputs.output_version }}
+        run: |
+          echo "Release: ${{ needs.main.outputs.output_release_version }}"
+          echo "Next: ${{ needs.main.outputs.output_next_version }}"
 
       # https://github.com/marketplace/actions/manage-milestones
-      - name: create milestone
+      - name: create next milestone
         uses: julb/action-manage-milestone@v1
         with:
-          title: ${{ needs.main.outputs.output_version }}
+          title: ${{ needs.main.outputs.output_next_version }}
           state: open
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      # https://github.com/marketplace/actions/manage-milestones
+      - name: get release milestone
+        id: milestone
+        uses: julb/action-manage-milestone@v1
+        with:
+          title: ${{ needs.main.outputs.output_release_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      # https://github.com/marketplace/actions/create-an-issue
+      - name: open release checklist
+        uses: JasonEtco/create-an-issue@v2
+        with:
+          filename: .github/release_checklist.md
+          milestone: ${{ steps.milestone.outputs.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          VERSION: ${{ needs.main.outputs.output_release_version }}
