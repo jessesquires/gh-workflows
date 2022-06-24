@@ -1,0 +1,121 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+# Starts a hot-fix release.
+#
+# 1. creates a release/* branch from the provided git tag
+# 2. version bumps hot-fix release branch
+# 3. creates milestone for hot-fix release
+
+name: Hot Fix Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Enter the EXISTING app version that needs to be hot-fixed. (Example: 1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  # version bump requires macos to update the xcconfig file
+  main:
+    name: Start Hotfix Release
+    runs-on: macos-12
+    outputs:
+      output_hotfix_version: ${{ steps.step_hotfix_version.outputs.hotfix_version }}
+    steps:
+      - name: check inputs
+        run: |
+          echo "Release to hotfix: ${{ github.event.inputs.version_tag }}"
+
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: ruby versions
+        run: |
+          ruby --version
+          gem --version
+
+      # https://github.com/ruby/setup-ruby
+      - name: ruby setup
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0
+          bundler-cache: true
+
+      - name: checkout git tag
+        run: |
+          git config --global user.email "${GITHUB_ACTOR}"
+          git config --global user.name "${GITHUB_ACTOR}@users.noreply.github.com"
+          git status
+          git fetch --all
+          git checkout v${{ github.event.inputs.version_tag }}
+
+      - name: patch version bump
+        # TODO: run your script to bump the version
+        run: ./scripts/set_app_version.rb
+
+      - name: set env hotfix version
+        # TODO: use your version script here
+        run: |
+          echo "hotfix_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
+          echo "hotfix_branch=release/$(./scripts/app_version.rb)" >> $GITHUB_ENV
+
+      - name: verify env hotfix variables
+        run: |
+          echo "Hotfix Version: ${{ env.hotfix_version }}"
+          echo "Hotfix Branch: ${{ env.hotfix_branch }}"
+
+      - name: set hotifx version output
+        id: step_hotfix_version
+        run: echo "::set-output name=hotfix_version::${{ env.hotfix_version }}"
+
+      - name: create hotfix branch
+        run: |
+          git checkout -b "${{ env.hotfix_branch }}"
+          git status
+          git add .
+          git commit -am "[Automated] hot fix version bump to ${{ env.hotfix_version }}"
+          git push origin -u "${{ env.hotfix_branch }}"
+          git status
+
+  # the milestone action requires linux
+  # so this needs to be a separate job
+  # we pass this job the app version as an output from the previous job
+  milestone-and-checklist:
+    needs: [main]
+    name: Create Milestone and Checklist
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: verify job outputs
+        run: |
+          echo "Hotfix: ${{ needs.main.outputs.output_hotfix_version }}"
+
+      # https://github.com/marketplace/actions/manage-milestones
+      - name: create hotfix milestone
+        id: milestone
+        uses: julb/action-manage-milestone@v1
+        with:
+          title: ${{ needs.main.outputs.output_hotfix_version }}
+          state: open
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      # https://github.com/marketplace/actions/create-an-issue
+      - name: open hotfix release checklist
+        uses: JasonEtco/create-an-issue@v2
+        with:
+          filename: .github/release_checklist.md
+          milestone: ${{ steps.milestone.outputs.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          VERSION: ${{ needs.main.outputs.output_hotfix_version }}
