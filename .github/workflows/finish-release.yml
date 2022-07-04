@@ -92,7 +92,7 @@ jobs:
 
       # https://github.com/marketplace/actions/github-create-tag-release
       - name: create github release
-        uses: Roang-zero1/github-create-release-action@v2.1.0
+        uses: Roang-zero1/github-create-release-action@v2.3.2
         with:
           created_tag: "v${{ needs.main.outputs.output_version }}"
         env:
