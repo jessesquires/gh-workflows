@@ -16,6 +16,7 @@ Workflows are developed and tested at [jessesquires/sandbox-gh-workflows](https:
 - [GitHub Actions workflows for automatic rebasing and merging](https://www.jessesquires.com/blog/2021/10/17/github-actions-workflows-for-automatic-rebasing-and-merging/)
 - [Automate merging release branches into your main branch with GitHub Actions](https://www.jessesquires.com/blog/2022/03/26/gh-action-merge-release-to-main/)
 - [Running Danger on GitHub Actions](https://www.jessesquires.com/blog/2020/04/10/running-danger-on-github-actions/)
+- [Automatically assign milestones with GitHub Actions](https://www.jessesquires.com/blog/2022/08/04/automatically-assign-milestones-with-github-actions/)
 
 ## Docs
 
