@@ -1,0 +1,45 @@
+# GitHub Actions Virtual Environments
+# https://github.com/actions/virtual-environments/
+
+name: Assign Milestone
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  pull_request_target:
+    types: [opened, reopened]
+
+jobs:
+  assign-milestone:
+    runs-on: macos-12
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+
+      - name: ruby versions
+        run: |
+          ruby --version
+          gem --version
+
+      # https://github.com/ruby/setup-ruby
+      - name: ruby setup
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0
+          bundler-cache: true
+
+      - name: set env variables
+        # TODO: run your script to get the version
+        run: |
+          echo "app_version=$(./scripts/app_version.rb)" >> $GITHUB_ENV
+
+      - name: verify env variables
+        run: |
+          echo "App Version: ${{ env.app_version }}"
+
+      # https://github.com/marketplace/actions/assign-a-milestone-to-pull-requests
+      - name: set milestone
+        uses: zoispag/action-assign-milestone@v2
+        with:
+          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          milestone: ${{ env.app_version }}
