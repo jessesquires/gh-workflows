@@ -97,7 +97,7 @@ jobs:
       # https://github.com/marketplace/actions/create-pull-request
       - name: create version bump PR
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           base: ${{ github.event.repository.default_branch }}
